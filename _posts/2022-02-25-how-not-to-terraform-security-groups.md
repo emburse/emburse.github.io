@@ -2,6 +2,7 @@
 layout: post
 title: "How not to terraform - AWS security groups"
 date: 2022-02-25
+author: Bevin Bennett
 categories: blog terraform aws howto hownotto
 tags: ['terraform', 'hotnotto', 'iac']
 ---
