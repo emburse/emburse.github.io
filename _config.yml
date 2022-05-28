@@ -26,7 +26,7 @@ title: Emburse Engineering Blog        # the main title
 tagline: 'Share, learn, innovate: A Blog for Emburse Engineering'   # it will display as the sub-title
 
 description: >-                        # used by seo meta and the atom feed
-  Here is where we share A minimal, responsive, and powerful Jekyll theme for presenting professional writing.
+  'Share, learn, innovate: A Blog for Emburse Engineering'
 
 # fill in the protocol & hostname for your site, e.g., 'https://username.github.io'
 url: 'https://emburse.github.io'
