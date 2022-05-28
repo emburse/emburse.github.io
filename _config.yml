@@ -43,7 +43,6 @@ social:
   name: Emburse
   email: ops@emburse.com             # change to your email address
   links:
-    - Copyright © 2022, Emburse, All Rights Reserved
     # The first element serves as the copyright owner's link
     #- https://twitter.com/username      # change to your twitter homepage
     - https://github.com/emburse       # change to your github homepage
