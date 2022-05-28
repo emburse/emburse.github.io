@@ -1,0 +1,365 @@
+I"�K<h2>  </h2>
+<p>Being an exploration of the many ways to manage AWS security groups using terraform and some of the corresponding gotchas you are likely to encounter.</p>
+<hr />
+
+<h4> Our scenario </h4>
+<p>For this discussion, imagine the following scenario.
+We have a webservice in an AWS VPC that we want to allow restricted access to. This webservice is part of production infrastructure and needs to be accessible from other systems in the following subnets:</p>
+<ul>
+  <li>10.1.0.0/24</li>
+  <li>10.1.1.0/24</li>
+  <li>10.1.2.0/24</li>
+</ul>
+
+<p>A few months later, we will be asked to remove access from 10.1.1.0/24 after that subnet is deprecated for unforseen reasons.
+Let’s see how some different terraform code approaches fare with this task…</p>
+
+<h4> Method the First - Inline </h4>
+<p>Checking the docs, the “aws_security_group” <sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup> resource supports an inline syntax for rules, which seems straightforward enough. Let’s give that a try.</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+</pre></td><td class="rouge-code"><pre><span class="nx">locals</span> <span class="p">{</span>
+  <span class="nx">webservice_cidrs</span> <span class="p">=</span> <span class="p">[</span><span class="s2">"10.1.0.0/24"</span><span class="p">,</span> <span class="s2">"10.1.1.0/24"</span><span class="p">,</span> <span class="s2">"10.1.2.0/24"</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="k">resource</span> <span class="s2">"aws_security_group"</span> <span class="s2">"webservice_access"</span> <span class="p">{</span>
+  <span class="nx">name</span>        <span class="p">=</span> <span class="s2">"webservice_access"</span>
+  <span class="nx">description</span> <span class="p">=</span> <span class="s2">"Allow secure access to our webservice"</span>
+  <span class="nx">vpc_id</span>      <span class="p">=</span> <span class="k">module</span><span class="p">.</span><span class="nx">vpc</span><span class="p">.</span><span class="nx">vpcid</span>
+
+  <span class="nx">ingress</span> <span class="p">{</span>
+    <span class="nx">from_port</span>   <span class="p">=</span> <span class="mi">443</span>
+    <span class="nx">to_port</span>     <span class="p">=</span> <span class="mi">443</span>
+    <span class="nx">protocol</span>    <span class="p">=</span> <span class="s2">"tcp"</span>
+    <span class="nx">cidr_blocks</span> <span class="p">=</span> <span class="kd">local</span><span class="p">.</span><span class="nx">webservice_cidrs</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>Hey! It works! Unfortunately, it feels less than ideal.</p>
+
+<p>Primarily, this approach means that we cannot add any rules except through this resource, because aws_security_group ingress blocks are incompatible with separate aws_security_group_rule resources. This is often a very useful thing to be able to do.</p>
+
+<p>We end up using separate rule resources often in our terraform because they allow for better logical separation between modules that create services and modules that depend on those modules. For example, we might have a dbserver module that creates and exports its security group, then modules for services that need to access the db pass in the security group id as a module variable and add their own rule(s) to it specific for their security group or IPs. This means that adding or modifying the dependent services module does not affect the db module itself, and removing that dependent module also naturally cleans up its db access rules. This gets to be especially important when implementing cross-account access.
+There’s another potential issue here as well, but we’ll get to that shortly…</p>
+
+<h4> Method the Second - aws_security_group_rule </h4>
+<p>Let’s try using the dedicated aws_security_group_rule <sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup> resources.</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+</pre></td><td class="rouge-code"><pre><span class="nx">locals</span> <span class="p">{</span>
+  <span class="nx">webservice_cidrs</span> <span class="p">=</span> <span class="p">[</span><span class="s2">"10.1.0.0/24"</span><span class="p">,</span> <span class="s2">"10.1.1.0/24"</span><span class="p">,</span> <span class="s2">"10.1.2.0/24"</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="k">resource</span> <span class="s2">"aws_security_group"</span> <span class="s2">"webservice_access"</span> <span class="p">{</span>
+  <span class="nx">name</span>        <span class="p">=</span> <span class="s2">"webservice_access"</span>
+  <span class="nx">description</span> <span class="p">=</span> <span class="s2">"Allow secure access to our webservice"</span>
+  <span class="nx">vpc_id</span>      <span class="p">=</span> <span class="k">module</span><span class="p">.</span><span class="nx">vpc</span><span class="p">.</span><span class="nx">vpcid</span>
+<span class="p">}</span>
+
+<span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+  <span class="nx">type</span>              <span class="p">=</span> <span class="s2">"ingress"</span>
+  <span class="nx">from_port</span>         <span class="p">=</span> <span class="mi">443</span>
+  <span class="nx">to_port</span>           <span class="p">=</span> <span class="mi">443</span>
+  <span class="nx">protocol</span>          <span class="p">=</span> <span class="s2">"tcp"</span>
+  <span class="nx">cidr_blocks</span>       <span class="p">=</span> <span class="kd">local</span><span class="p">.</span><span class="nx">webservice_cidrs</span>
+  <span class="nx">security_group_id</span> <span class="p">=</span> <span class="nx">aws_security_group</span><span class="p">.</span><span class="nx">webservice_access</span><span class="p">.</span><span class="nx">id</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+<p>Nice! Now we can manage rules separately from the security group itself.
+That said, if this is used for production systems there’s still going to be an issue, which we won’t see until we need to make changes to this rule. Let’s move forward to where we need to remove that subnet.</p>
+
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="nx">locals</span> <span class="p">{</span>
+  <span class="nx">webservice_cidrs</span> <span class="p">=</span> <span class="p">[</span><span class="s2">"10.1.1.0/24"</span><span class="p">,</span> <span class="s2">"10.1.2.0/24"</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+<p>Seems ok. Plan unsurprisingly says:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre></td><td class="rouge-code"><pre>  # aws_security_group_rule.webservice_443 must be replaced
+-/+ resource "aws_security_group_rule" "webservice_443" {
+      ~ cidr_blocks              = [ # forces replacement
+          - "10.1.0.0/24",
+            "10.1.1.0/24",
+            # (1 unchanged element hidden)
+        ]
+      ~ id                       = "sgrule-550362072" -&gt; (known after apply)
+      - ipv6_cidr_blocks         = [] -&gt; null
+      - prefix_list_ids          = [] -&gt; null
+      + source_security_group_id = (known after apply)
+        # (6 unchanged attributes hidden)
+    }
+
+Plan: 1 to add, 0 to change, 1 to destroy.
+</pre></td></tr></tbody></table></code></pre></div></div>
+<p>…
+But let’s look at what happens when we apply:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre>aws_security_group_rule.webservice_443: Destroying... [id=sgrule-550362072]
+aws_security_group_rule.webservice_443: Destruction complete after 0s
+aws_security_group_rule.webservice_443: Creating...
+aws_security_group_rule.webservice_443: Creation complete after 2s [id=sgrule-1022565893]
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>Uh-oh… that “must be replaced” meant that terraform removed ALL the rules from this resource and then took a few seconds to put them back. That doesn’t sound too bad, but if you’re a large site getting several (or several thousand) hits per second, you just had 2s of downtime even for the CIDRs you didn’t touch. There go your “nines”.</p>
+
+<p>Unless we’re feeling super-cool and want to go re-write the terraform aws provider to try to be more clever about that, this isn’t going to work. The previous approach also had the same issue, as we alluded earlier.</p>
+
+<h4> Method the Third - count the aws_security_group_rules </h4>
+<p>Ok, so we <em>could</em> split up that resource into multiple terraform resources, that should let us replace or remove one without impacting the others, right?</p>
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre></td><td class="rouge-code"><pre><span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+  <span class="nx">count</span>             <span class="p">=</span> <span class="nx">length</span><span class="p">(</span><span class="kd">local</span><span class="p">.</span><span class="nx">webservice_cidrs</span><span class="p">)</span>
+  <span class="nx">type</span>              <span class="p">=</span> <span class="s2">"ingress"</span>
+  <span class="nx">from_port</span>         <span class="p">=</span> <span class="mi">443</span>
+  <span class="nx">to_port</span>           <span class="p">=</span> <span class="mi">443</span>
+  <span class="nx">protocol</span>          <span class="p">=</span> <span class="s2">"tcp"</span>
+  <span class="nx">cidr_blocks</span>       <span class="p">=</span> <span class="p">[</span><span class="nx">element</span><span class="p">(</span><span class="kd">local</span><span class="p">.</span><span class="nx">webservice_cidrs</span><span class="p">,</span><span class="nx">count</span><span class="p">.</span><span class="nx">index</span><span class="p">)]</span>
+  <span class="nx">security_group_id</span> <span class="p">=</span> <span class="nx">aws_security_group</span><span class="p">.</span><span class="nx">webservice_access</span><span class="p">.</span><span class="nx">id</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+<p>This makes planning slightly slower, but should give us the resilience we need, right?
+Original apply looks good, let’s see what happens when we remove that CIDR…</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+</pre></td><td class="rouge-code"><pre>  # aws_security_group_rule.webservice_443[0] must be replaced
+-/+ resource "aws_security_group_rule" "webservice_443" {
+      ~ cidr_blocks              = [ # forces replacement
+          - "10.1.0.0/24",
+          + "10.1.1.0/24",
+        ]
+      ~ id                       = "sgrule-3406563736" -&gt; (known after apply)
+      - ipv6_cidr_blocks         = [] -&gt; null
+      - prefix_list_ids          = [] -&gt; null
+      + source_security_group_id = (known after apply)
+        # (6 unchanged attributes hidden)
+    }
+
+  # aws_security_group_rule.webservice_443[1] must be replaced
+-/+ resource "aws_security_group_rule" "webservice_443" {
+      ~ cidr_blocks              = [ # forces replacement
+          - "10.1.1.0/24",
+          + "10.1.2.0/24",
+        ]
+      ~ id                       = "sgrule-1836778028" -&gt; (known after apply)
+      - ipv6_cidr_blocks         = [] -&gt; null
+      - prefix_list_ids          = [] -&gt; null
+      + source_security_group_id = (known after apply)
+        # (6 unchanged attributes hidden)
+    }
+
+  # aws_security_group_rule.webservice_443[2] will be destroyed
+  - resource "aws_security_group_rule" "webservice_443" {
+      - cidr_blocks       = [
+          - "10.1.2.0/24",
+        ] -&gt; null
+      - from_port         = 443 -&gt; null
+      - id                = "sgrule-1553143985" -&gt; null
+      - ipv6_cidr_blocks  = [] -&gt; null
+      - prefix_list_ids   = [] -&gt; null
+      - protocol          = "tcp" -&gt; null
+      - security_group_id = "sg-06c87879a5b7143e4" -&gt; null
+      - self              = false -&gt; null
+      - to_port           = 443 -&gt; null
+      - type              = "ingress" -&gt; null
+    }
+
+Plan: 2 to add, 0 to change, 3 to destroy.
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>Oh my. That effectively changed the index of every entry, which means that terraform now wants to, once again, delete and replace everything, which means unexpected downtime. Even worse, as there seem to be more API calls involved, it can take even longer than before to recreate the security groups.</p>
+
+<p>We could address this with some clever <code class="language-plaintext highlighter-rouge">terraform state mv</code> commands to rename things, but that’s a lot of extra work post-merge that needs to happen quickly and potentially across many many environments. It’s non-trivial (or at least annoying) to do this rotation, as you need to add a temporary imaginary location.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre>terraform state mv aws_security_group_rule.webservice_443["0"] aws_security_group_rule.webservice_443["4"]
+terraform state mv aws_security_group_rule.webservice_443["1"] aws_security_group_rule.webservice_443["0"]
+terraform state mv aws_security_group_rule.webservice_443["2"] aws_security_group_rule.webservice_443["1"]
+terraform state mv aws_security_group_rule.webservice_443["4"] aws_security_group_rule.webservice_443["2"]
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>Let’s keep looking.</p>
+
+<h4> Method the Fourth - hard code everything? </h4>
+<p>We could just hardcode a separate aws_security_group_rule resource for every possible CIDR, but that cannot be used as a generic module, is incredibly suceptable to copypasta errors, and is hideous to look at. So we’re not even going to go there.</p>
+
+<h4> Method the Fifth - The final form? for_each </h4>
+<p>So, is all lost? No! Thanks goodness the Hashicorp team has been listening and we’ve had one more option made available to us.</p>
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre></td><td class="rouge-code"><pre><span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+  <span class="nx">for_each</span>          <span class="p">=</span> <span class="nx">toset</span><span class="p">(</span><span class="kd">local</span><span class="p">.</span><span class="nx">webservice_cidrs</span><span class="p">)</span>
+  <span class="nx">type</span>              <span class="p">=</span> <span class="s2">"ingress"</span>
+  <span class="nx">from_port</span>         <span class="p">=</span> <span class="mi">443</span>
+  <span class="nx">to_port</span>           <span class="p">=</span> <span class="mi">443</span>
+  <span class="nx">protocol</span>          <span class="p">=</span> <span class="s2">"tcp"</span>
+  <span class="nx">cidr_blocks</span>       <span class="p">=</span> <span class="p">[</span><span class="nx">each</span><span class="p">.</span><span class="nx">value</span><span class="p">]</span>
+  <span class="nx">security_group_id</span> <span class="p">=</span> <span class="nx">aws_security_group</span><span class="p">.</span><span class="nx">webservice_access</span><span class="p">.</span><span class="nx">id</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>Last chance, let’s see what happens when we remove that subnet this time.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+</pre></td><td class="rouge-code"><pre>  # aws_security_group_rule.webservice_443["10.1.0.0/24"] will be destroyed
+  - resource "aws_security_group_rule" "webservice_443" {
+      - cidr_blocks       = [
+          - "10.1.0.0/24",
+        ] -&gt; null
+      - from_port         = 443 -&gt; null
+      - id                = "sgrule-3406563736" -&gt; null
+      - ipv6_cidr_blocks  = [] -&gt; null
+      - prefix_list_ids   = [] -&gt; null
+      - protocol          = "tcp" -&gt; null
+      - security_group_id = "sg-06c87879a5b7143e4" -&gt; null
+      - self              = false -&gt; null
+      - to_port           = 443 -&gt; null
+      - type              = "ingress" -&gt; null
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+
+</pre></td></tr></tbody></table></code></pre></div></div>
+<p>Success!
+While for_each may seem new and frightening and weird and unintuitive, it’s also (for now) the only sensible option if you don’t want to be surprised by unintended downtime or scaling issues down the line.</p>
+
+<p>Thank you for staying with us through this very specific (but hopefully useful) adventure.</p>
+
+<hr />
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p><a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group">Resource: aws_security_group</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:2" role="doc-endnote">
+      <p><a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule">Resource: aws_security_group_rule</a> <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+:ET
