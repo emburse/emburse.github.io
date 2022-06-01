@@ -1,10 +1,10 @@
 ---
-layout: post
 title: "How not to terraform - AWS security groups"
 date: 2022-02-25
-author: Bevin Bennett
+author: 
+  name: Bevan Bennett
 categories: blog terraform aws howto hownotto
-tags: ['terraform', 'hotnotto', 'iac']
+tags: ['terraform', 'hownotto', 'iac']
 ---
 
 <h2> {{ post.title }} </h2>
@@ -24,7 +24,7 @@ Let's see how some different terraform code approaches fare with this task...
 <h4> Method the First - Inline </h4>
 Checking the docs, the "aws_security_group" [^1] resource supports an inline syntax for rules, which seems straightforward enough. Let's give that a try.
 
-``` terraform
+```terraform
 locals {
   webservice_cidrs = ["10.1.0.0/24", "10.1.1.0/24", "10.1.2.0/24"]
 }
@@ -53,7 +53,7 @@ There's another potential issue here as well, but we'll get to that shortly...
 <h4> Method the Second - aws_security_group_rule </h4>
 Let's try using the dedicated aws_security_group_rule [^2] resources.
 
-``` terraform
+```terraform
 locals {
   webservice_cidrs = ["10.1.0.0/24", "10.1.1.0/24", "10.1.2.0/24"]
 }
@@ -76,13 +76,13 @@ resource "aws_security_group_rule" "webservice_443" {
 Nice! Now we can manage rules separately from the security group itself.
 That said, if this is used for production systems there's still going to be an issue, which we won't see until we need to make changes to this rule. Let's move forward to where we need to remove that subnet.
 
-``` terraform
+```terraform
 locals {
   webservice_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
 }
 ```
 Seems ok. Plan unsurprisingly says:
-```
+```terraform
   # aws_security_group_rule.webservice_443 must be replaced
 -/+ resource "aws_security_group_rule" "webservice_443" {
       ~ cidr_blocks              = [ # forces replacement
@@ -101,7 +101,7 @@ Plan: 1 to add, 0 to change, 1 to destroy.
 ```
 ...
 But let's look at what happens when we apply:
-```
+```shell
 aws_security_group_rule.webservice_443: Destroying... [id=sgrule-550362072]
 aws_security_group_rule.webservice_443: Destruction complete after 0s
 aws_security_group_rule.webservice_443: Creating...
@@ -114,7 +114,7 @@ Unless we're feeling super-cool and want to go re-write the terraform aws provid
 
 <h4> Method the Third - count the aws_security_group_rules </h4>
 Ok, so we *could* split up that resource into multiple terraform resources, that should let us replace or remove one without impacting the others, right?
-``` terraform
+```terraform
 resource "aws_security_group_rule" "webservice_443" {
   count             = length(local.webservice_cidrs)
   type              = "ingress"
