@@ -1,4 +1,4 @@
-I"L<h2>  </h2>
+I"�m<h2>  </h2>
 <p>Being an exploration of the many ways to manage AWS security groups using terraform and some of the corresponding gotchas you are likely to encounter.</p>
 <hr />
 
@@ -109,7 +109,7 @@ That said, if this is used for production systems there’s still going to be an
 <span class="p">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 <p>Seems ok. Plan unsurprisingly says:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
 2
 3
 4
@@ -124,32 +124,32 @@ That said, if this is used for production systems there’s still going to be an
 13
 14
 15
-</pre></td> --><td class="rouge-code"><pre>  # aws_security_group_rule.webservice_443 must be replaced
--/+ resource "aws_security_group_rule" "webservice_443" {
-      ~ cidr_blocks              = [ # forces replacement
-          - "10.1.0.0/24",
-            "10.1.1.0/24",
-            # (1 unchanged element hidden)
-        ]
-      ~ id                       = "sgrule-550362072" -&gt; (known after apply)
-      - ipv6_cidr_blocks         = [] -&gt; null
-      - prefix_list_ids          = [] -&gt; null
-      + source_security_group_id = (known after apply)
-        # (6 unchanged attributes hidden)
-    }
+</pre></td> --><td class="rouge-code"><pre>  <span class="c1"># aws_security_group_rule.webservice_443 must be replaced</span>
+<span class="err">-/+</span> <span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+      <span class="err">~</span> <span class="nx">cidr_blocks</span>              <span class="p">=</span> <span class="p">[</span> <span class="c1"># forces replacement</span>
+          <span class="err">-</span> <span class="s2">"10.1.0.0/24"</span><span class="p">,</span>
+            <span class="s2">"10.1.1.0/24"</span><span class="p">,</span>
+            <span class="c1"># (1 unchanged element hidden)</span>
+        <span class="p">]</span>
+      <span class="err">~</span> <span class="nx">id</span>                       <span class="p">=</span> <span class="s2">"sgrule-550362072"</span> <span class="err">-&gt;</span> <span class="p">(</span><span class="nx">known</span> <span class="nx">after</span> <span class="nx">apply</span><span class="p">)</span>
+      <span class="err">-</span> <span class="nx">ipv6_cidr_blocks</span>         <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">prefix_list_ids</span>          <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">+</span> <span class="nx">source_security_group_id</span> <span class="p">=</span> <span class="p">(</span><span class="nx">known</span> <span class="nx">after</span> <span class="nx">apply</span><span class="p">)</span>
+        <span class="c1"># (6 unchanged attributes hidden)</span>
+    <span class="p">}</span>
 
-Plan: 1 to add, 0 to change, 1 to destroy.
+<span class="nx">Plan</span><span class="err">:</span> <span class="mi">1</span> <span class="nx">to</span> <span class="nx">add</span><span class="err">,</span> <span class="mi">0</span> <span class="nx">to</span> <span class="nx">change</span><span class="err">,</span> <span class="mi">1</span> <span class="nx">to</span> <span class="nx">destroy</span><span class="err">.</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 <p>…
 But let’s look at what happens when we apply:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
 2
 3
 4
-</pre></td> --><td class="rouge-code"><pre>aws_security_group_rule.webservice_443: Destroying... [id=sgrule-550362072]
-aws_security_group_rule.webservice_443: Destruction complete after 0s
+</pre></td> --><td class="rouge-code"><pre>aws_security_group_rule.webservice_443: Destroying... <span class="o">[</span><span class="nb">id</span><span class="o">=</span>sgrule-550362072]
+aws_security_group_rule.webservice_443: Destruction <span class="nb">complete </span>after 0s
 aws_security_group_rule.webservice_443: Creating...
-aws_security_group_rule.webservice_443: Creation complete after 2s [id=sgrule-1022565893]
+aws_security_group_rule.webservice_443: Creation <span class="nb">complete </span>after 2s <span class="o">[</span><span class="nb">id</span><span class="o">=</span>sgrule-1022565893]
 </pre></td></tr></tbody></table></code></pre></div></div>
 
 <p>Uh-oh… that “must be replaced” meant that terraform removed ALL the rules from this resource and then took a few seconds to put them back. That doesn’t sound too bad, but if you’re a large site getting several (or several thousand) hits per second, you just had 2s of downtime even for the CIDRs you didn’t touch. There go your “nines”.</p>
@@ -179,7 +179,7 @@ aws_security_group_rule.webservice_443: Creation complete after 2s [id=sgrule-10
 </pre></td></tr></tbody></table></code></pre></div></div>
 <p>This makes planning slightly slower, but should give us the resilience we need, right?
 Original apply looks good, let’s see what happens when we remove that CIDR…</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
 2
 3
 4
@@ -222,62 +222,62 @@ Original apply looks good, let’s see what happens when we remove that CIDR…<
 41
 42
 43
-</pre></td> --><td class="rouge-code"><pre>  # aws_security_group_rule.webservice_443[0] must be replaced
--/+ resource "aws_security_group_rule" "webservice_443" {
-      ~ cidr_blocks              = [ # forces replacement
-          - "10.1.0.0/24",
-          + "10.1.1.0/24",
-        ]
-      ~ id                       = "sgrule-3406563736" -&gt; (known after apply)
-      - ipv6_cidr_blocks         = [] -&gt; null
-      - prefix_list_ids          = [] -&gt; null
-      + source_security_group_id = (known after apply)
-        # (6 unchanged attributes hidden)
-    }
+</pre></td> --><td class="rouge-code"><pre>  <span class="c1"># aws_security_group_rule.webservice_443[0] must be replaced</span>
+<span class="err">-/+</span> <span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+      <span class="err">~</span> <span class="nx">cidr_blocks</span>              <span class="p">=</span> <span class="p">[</span> <span class="c1"># forces replacement</span>
+          <span class="err">-</span> <span class="s2">"10.1.0.0/24"</span><span class="p">,</span>
+          <span class="err">+</span> <span class="s2">"10.1.1.0/24"</span><span class="p">,</span>
+        <span class="p">]</span>
+      <span class="err">~</span> <span class="nx">id</span>                       <span class="p">=</span> <span class="s2">"sgrule-3406563736"</span> <span class="err">-&gt;</span> <span class="p">(</span><span class="nx">known</span> <span class="nx">after</span> <span class="nx">apply</span><span class="p">)</span>
+      <span class="err">-</span> <span class="nx">ipv6_cidr_blocks</span>         <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">prefix_list_ids</span>          <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">+</span> <span class="nx">source_security_group_id</span> <span class="p">=</span> <span class="p">(</span><span class="nx">known</span> <span class="nx">after</span> <span class="nx">apply</span><span class="p">)</span>
+        <span class="c1"># (6 unchanged attributes hidden)</span>
+    <span class="p">}</span>
 
-  # aws_security_group_rule.webservice_443[1] must be replaced
--/+ resource "aws_security_group_rule" "webservice_443" {
-      ~ cidr_blocks              = [ # forces replacement
-          - "10.1.1.0/24",
-          + "10.1.2.0/24",
-        ]
-      ~ id                       = "sgrule-1836778028" -&gt; (known after apply)
-      - ipv6_cidr_blocks         = [] -&gt; null
-      - prefix_list_ids          = [] -&gt; null
-      + source_security_group_id = (known after apply)
-        # (6 unchanged attributes hidden)
-    }
+  <span class="c1"># aws_security_group_rule.webservice_443[1] must be replaced</span>
+<span class="err">-/+</span> <span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+      <span class="err">~</span> <span class="nx">cidr_blocks</span>              <span class="p">=</span> <span class="p">[</span> <span class="c1"># forces replacement</span>
+          <span class="err">-</span> <span class="s2">"10.1.1.0/24"</span><span class="p">,</span>
+          <span class="err">+</span> <span class="s2">"10.1.2.0/24"</span><span class="p">,</span>
+        <span class="p">]</span>
+      <span class="err">~</span> <span class="nx">id</span>                       <span class="p">=</span> <span class="s2">"sgrule-1836778028"</span> <span class="err">-&gt;</span> <span class="p">(</span><span class="nx">known</span> <span class="nx">after</span> <span class="nx">apply</span><span class="p">)</span>
+      <span class="err">-</span> <span class="nx">ipv6_cidr_blocks</span>         <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">prefix_list_ids</span>          <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">+</span> <span class="nx">source_security_group_id</span> <span class="p">=</span> <span class="p">(</span><span class="nx">known</span> <span class="nx">after</span> <span class="nx">apply</span><span class="p">)</span>
+        <span class="c1"># (6 unchanged attributes hidden)</span>
+    <span class="p">}</span>
 
-  # aws_security_group_rule.webservice_443[2] will be destroyed
-  - resource "aws_security_group_rule" "webservice_443" {
-      - cidr_blocks       = [
-          - "10.1.2.0/24",
-        ] -&gt; null
-      - from_port         = 443 -&gt; null
-      - id                = "sgrule-1553143985" -&gt; null
-      - ipv6_cidr_blocks  = [] -&gt; null
-      - prefix_list_ids   = [] -&gt; null
-      - protocol          = "tcp" -&gt; null
-      - security_group_id = "sg-06c87879a5b7143e4" -&gt; null
-      - self              = false -&gt; null
-      - to_port           = 443 -&gt; null
-      - type              = "ingress" -&gt; null
-    }
+  <span class="c1"># aws_security_group_rule.webservice_443[2] will be destroyed</span>
+  <span class="err">-</span> <span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+      <span class="err">-</span> <span class="nx">cidr_blocks</span>       <span class="p">=</span> <span class="p">[</span>
+          <span class="err">-</span> <span class="s2">"10.1.2.0/24"</span><span class="p">,</span>
+        <span class="p">]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">from_port</span>         <span class="p">=</span> <span class="mi">443</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">id</span>                <span class="p">=</span> <span class="s2">"sgrule-1553143985"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">ipv6_cidr_blocks</span>  <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">prefix_list_ids</span>   <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">protocol</span>          <span class="p">=</span> <span class="s2">"tcp"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">security_group_id</span> <span class="p">=</span> <span class="s2">"sg-06c87879a5b7143e4"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">self</span>              <span class="p">=</span> <span class="kc">false</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">to_port</span>           <span class="p">=</span> <span class="mi">443</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">type</span>              <span class="p">=</span> <span class="s2">"ingress"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+    <span class="p">}</span>
 
-Plan: 2 to add, 0 to change, 3 to destroy.
+<span class="nx">Plan</span><span class="err">:</span> <span class="mi">2</span> <span class="nx">to</span> <span class="nx">add</span><span class="err">,</span> <span class="mi">0</span> <span class="nx">to</span> <span class="nx">change</span><span class="err">,</span> <span class="mi">3</span> <span class="nx">to</span> <span class="nx">destroy</span><span class="err">.</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
 <p>Oh my. That effectively changed the index of every entry, which means that terraform now wants to, once again, delete and replace everything, which means unexpected downtime. Even worse, as there seem to be more API calls involved, it can take even longer than before to recreate the security groups.</p>
 
 <p>We could address this with some clever <code class="language-plaintext highlighter-rouge">terraform state mv</code> commands to rename things, but that’s a lot of extra work post-merge that needs to happen quickly and potentially across many many environments. It’s non-trivial (or at least annoying) to do this rotation, as you need to add a temporary imaginary location.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
 2
 3
 4
-</pre></td> --><td class="rouge-code"><pre>terraform state mv aws_security_group_rule.webservice_443["0"] aws_security_group_rule.webservice_443["4"]
-terraform state mv aws_security_group_rule.webservice_443["1"] aws_security_group_rule.webservice_443["0"]
-terraform state mv aws_security_group_rule.webservice_443["2"] aws_security_group_rule.webservice_443["1"]
-terraform state mv aws_security_group_rule.webservice_443["4"] aws_security_group_rule.webservice_443["2"]
+</pre></td> --><td class="rouge-code"><pre>terraform state <span class="nb">mv </span>aws_security_group_rule.webservice_443[<span class="s2">"0"</span><span class="o">]</span> aws_security_group_rule.webservice_443[<span class="s2">"4"</span><span class="o">]</span>
+terraform state <span class="nb">mv </span>aws_security_group_rule.webservice_443[<span class="s2">"1"</span><span class="o">]</span> aws_security_group_rule.webservice_443[<span class="s2">"0"</span><span class="o">]</span>
+terraform state <span class="nb">mv </span>aws_security_group_rule.webservice_443[<span class="s2">"2"</span><span class="o">]</span> aws_security_group_rule.webservice_443[<span class="s2">"1"</span><span class="o">]</span>
+terraform state <span class="nb">mv </span>aws_security_group_rule.webservice_443[<span class="s2">"4"</span><span class="o">]</span> aws_security_group_rule.webservice_443[<span class="s2">"2"</span><span class="o">]</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
 <p>Let’s keep looking.</p>
@@ -308,7 +308,7 @@ terraform state mv aws_security_group_rule.webservice_443["4"] aws_security_grou
 </pre></td></tr></tbody></table></code></pre></div></div>
 
 <p>Last chance, let’s see what happens when we remove that subnet this time.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
+<div class="language-terraform highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
 2
 3
 4
@@ -326,23 +326,23 @@ terraform state mv aws_security_group_rule.webservice_443["4"] aws_security_grou
 16
 17
 18
-</pre></td> --><td class="rouge-code"><pre>  # aws_security_group_rule.webservice_443["10.1.0.0/24"] will be destroyed
-  - resource "aws_security_group_rule" "webservice_443" {
-      - cidr_blocks       = [
-          - "10.1.0.0/24",
-        ] -&gt; null
-      - from_port         = 443 -&gt; null
-      - id                = "sgrule-3406563736" -&gt; null
-      - ipv6_cidr_blocks  = [] -&gt; null
-      - prefix_list_ids   = [] -&gt; null
-      - protocol          = "tcp" -&gt; null
-      - security_group_id = "sg-06c87879a5b7143e4" -&gt; null
-      - self              = false -&gt; null
-      - to_port           = 443 -&gt; null
-      - type              = "ingress" -&gt; null
-    }
+</pre></td> --><td class="rouge-code"><pre>  <span class="c1"># aws_security_group_rule.webservice_443["10.1.0.0/24"] will be destroyed</span>
+  <span class="err">-</span> <span class="k">resource</span> <span class="s2">"aws_security_group_rule"</span> <span class="s2">"webservice_443"</span> <span class="p">{</span>
+      <span class="err">-</span> <span class="nx">cidr_blocks</span>       <span class="p">=</span> <span class="p">[</span>
+          <span class="err">-</span> <span class="s2">"10.1.0.0/24"</span><span class="p">,</span>
+        <span class="p">]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">from_port</span>         <span class="p">=</span> <span class="mi">443</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">id</span>                <span class="p">=</span> <span class="s2">"sgrule-3406563736"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">ipv6_cidr_blocks</span>  <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">prefix_list_ids</span>   <span class="p">=</span> <span class="p">[]</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">protocol</span>          <span class="p">=</span> <span class="s2">"tcp"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">security_group_id</span> <span class="p">=</span> <span class="s2">"sg-06c87879a5b7143e4"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">self</span>              <span class="p">=</span> <span class="kc">false</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">to_port</span>           <span class="p">=</span> <span class="mi">443</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+      <span class="err">-</span> <span class="nx">type</span>              <span class="p">=</span> <span class="s2">"ingress"</span> <span class="err">-&gt;</span> <span class="kc">null</span>
+    <span class="p">}</span>
 
-Plan: 0 to add, 0 to change, 1 to destroy.
+<span class="nx">Plan</span><span class="err">:</span> <span class="mi">0</span> <span class="nx">to</span> <span class="nx">add</span><span class="err">,</span> <span class="mi">0</span> <span class="nx">to</span> <span class="nx">change</span><span class="err">,</span> <span class="mi">1</span> <span class="nx">to</span> <span class="nx">destroy</span><span class="err">.</span>
 
 </pre></td></tr></tbody></table></code></pre></div></div>
 <p>Success!

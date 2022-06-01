@@ -3,8 +3,8 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <id>http://0.0.0.0:4000/</id>
   <title>Emburse Engineering Blog</title>
-  <subtitle>Here is where we share A minimal, responsive, and powerful Jekyll theme for presenting professional writing.</subtitle>
-  <updated>2022-05-28T21:15:33+00:00</updated>
+  <subtitle>'Share, learn, innovate: A Blog for Emburse Engineering'</subtitle>
+  <updated>2022-06-01T18:40:43+00:00</updated>
   <author>
     <name>Emburse</name>
     <uri>http://0.0.0.0:4000/</uri>
@@ -24,12 +24,12 @@
     <link href="http://0.0.0.0:4000/posts/how-not-to-terraform-security-groups/" rel="alternate" type="text/html" title="How not to terraform - AWS security groups" />
     <published>2022-02-25T00:00:00+00:00</published>
   
-    <updated>2022-02-25T00:00:00+00:00</updated>
+    <updated>2022-06-01T18:25:50+00:00</updated>
   
     <id>http://0.0.0.0:4000/posts/how-not-to-terraform-security-groups/</id>
     <content src="http://0.0.0.0:4000/posts/how-not-to-terraform-security-groups/" />
     <author>
-      <name>Emburse</name>
+      <name>{"name"=>"Bevan Bennett"}</name>
     </author>
 
   

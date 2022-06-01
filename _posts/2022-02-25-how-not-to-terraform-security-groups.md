@@ -127,7 +127,7 @@ resource "aws_security_group_rule" "webservice_443" {
 ```
 This makes planning slightly slower, but should give us the resilience we need, right?
 Original apply looks good, let's see what happens when we remove that CIDR...
-```
+```terraform
   # aws_security_group_rule.webservice_443[0] must be replaced
 -/+ resource "aws_security_group_rule" "webservice_443" {
       ~ cidr_blocks              = [ # forces replacement
@@ -176,7 +176,7 @@ Plan: 2 to add, 0 to change, 3 to destroy.
 Oh my. That effectively changed the index of every entry, which means that terraform now wants to, once again, delete and replace everything, which means unexpected downtime. Even worse, as there seem to be more API calls involved, it can take even longer than before to recreate the security groups.
 
 We could address this with some clever `terraform state mv` commands to rename things, but that's a lot of extra work post-merge that needs to happen quickly and potentially across many many environments. It's non-trivial (or at least annoying) to do this rotation, as you need to add a temporary imaginary location.
-```
+```bash
 terraform state mv aws_security_group_rule.webservice_443["0"] aws_security_group_rule.webservice_443["4"]
 terraform state mv aws_security_group_rule.webservice_443["1"] aws_security_group_rule.webservice_443["0"]
 terraform state mv aws_security_group_rule.webservice_443["2"] aws_security_group_rule.webservice_443["1"]
@@ -190,7 +190,7 @@ We could just hardcode a separate aws_security_group_rule resource for every pos
 
 <h4> Method the Fifth - The final form? for_each </h4>
 So, is all lost? No! Thanks goodness the Hashicorp team has been listening and we've had one more option made available to us.
-``` terraform
+```terraform
 resource "aws_security_group_rule" "webservice_443" {
   for_each          = toset(local.webservice_cidrs)
   type              = "ingress"
@@ -203,7 +203,7 @@ resource "aws_security_group_rule" "webservice_443" {
 ```
 
 Last chance, let's see what happens when we remove that subnet this time.
-```
+```terraform
   # aws_security_group_rule.webservice_443["10.1.0.0/24"] will be destroyed
   - resource "aws_security_group_rule" "webservice_443" {
       - cidr_blocks       = [
