@@ -18,8 +18,8 @@
   {
     "title": "How not to terraform - AWS security groups",
     "url": "/posts/how-not-to-terraform-security-groups/",
-    "categories": "blog, terraform, aws, howto, hownotto",
-    "tags": "terraform, hownotto, iac",
+    "categories": "How-To",
+    "tags": "aws, iac, terraform, howto, hownotto",
     "date": "2022-02-25 00:00:00 +0000",
     
 
