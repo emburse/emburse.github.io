@@ -1,21 +1,6 @@
 [
   
   {
-    "title": "What are kubernetes deployments",
-    "url": "/posts/deployments/",
-    "categories": "kubernetes, deployment resource",
-    "tags": "kubernetes, k8s",
-    "date": "2022-06-01 00:00:00 +0000",
-    
-
-
-
-
-
-    "snippet": "What are kubernetes deployments?Deployment resourceKubernetes resources describes the desired state of pods in the kubernetes clusterapiVersion: apps/v1kind: Deploymentmetadata:  labels:    app: nginx  name: nginx  namespace: ops-systemspec:  replicas: 2  revisionHistoryLimit: 10  selector:    matchLabels:      app: nginx  strategy:    rollingUpdate:      maxSurge: 25%      maxUnavailable: 25%    type: RollingUpdate  template:    metadata:      labels:        app: nginx    spec:      containers:      - image: nginx        imagePullPolicy: Always        name: nginx        ports:        - containerPort: 8080          protocol: TCP        resources: {}"
-  },
-  
-  {
     "title": "How not to terraform - AWS security groups",
     "url": "/posts/how-not-to-terraform-security-groups/",
     "categories": "How-To",
