@@ -3,8 +3,8 @@ title: "How not to terraform - AWS security groups"
 date: 2022-02-25
 author: 
   name: Bevan Bennett
-categories: blog terraform aws howto hownotto
-tags: ['terraform', 'hownotto', 'iac']
+categories: [How-To]
+tags: [aws, iac, terraform, howto, hownotto]
 ---
 
 <h2> {{ post.title }} </h2>
