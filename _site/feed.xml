@@ -4,7 +4,7 @@
   <id>http://0.0.0.0:4000/</id>
   <title>Emburse Engineering Blog</title>
   <subtitle>'Share, learn, innovate: A Blog for Emburse Engineering'</subtitle>
-  <updated>2022-06-01T18:40:43+00:00</updated>
+  <updated>2022-06-01T18:54:49+00:00</updated>
   <author>
     <name>Emburse</name>
     <uri>http://0.0.0.0:4000/</uri>
@@ -20,11 +20,73 @@
 
   
   <entry>
+    <title>What are kubernetes deployments</title>
+    <link href="http://0.0.0.0:4000/posts/deployments/" rel="alternate" type="text/html" title="What are kubernetes deployments" />
+    <published>2022-06-01T00:00:00+00:00</published>
+  
+    <updated>2022-06-01T00:00:00+00:00</updated>
+  
+    <id>http://0.0.0.0:4000/posts/deployments/</id>
+    <content src="http://0.0.0.0:4000/posts/deployments/" />
+    <author>
+      <name>{"name"=>"Robert Kozak"}</name>
+    </author>
+
+  
+    
+    <category term="kubernetes" />
+    
+    <category term="deployment resource" />
+    
+  
+
+  
+    <summary>
+      
+
+
+
+
+
+      What are kubernetes deployments?
+
+
+
+Deployment resource
+
+
+
+Kubernetes resources describes the desired state of pods in the kubernetes cluster
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+  namespace: ops-system
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nginx
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+...
+    </summary>
+  
+
+  </entry>
+
+  
+  <entry>
     <title>How not to terraform - AWS security groups</title>
     <link href="http://0.0.0.0:4000/posts/how-not-to-terraform-security-groups/" rel="alternate" type="text/html" title="How not to terraform - AWS security groups" />
     <published>2022-02-25T00:00:00+00:00</published>
   
-    <updated>2022-06-01T18:25:50+00:00</updated>
+    <updated>2022-06-01T18:41:37+00:00</updated>
   
     <id>http://0.0.0.0:4000/posts/how-not-to-terraform-security-groups/</id>
     <content src="http://0.0.0.0:4000/posts/how-not-to-terraform-security-groups/" />
