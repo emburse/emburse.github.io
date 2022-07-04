@@ -66,7 +66,7 @@ test() {
 }
 
 resume_site_dir() {
-  echo "resume_site_dir" 
+  echo "resume_site_dir"
   if [[ -n $_baseurl ]]; then
     # Move the site file to the regular directory '_site'
     mv "$SITE_DIR$_baseurl" "${SITE_DIR}-rename"
@@ -87,13 +87,15 @@ setup_gh() {
 
 backup() {
   echo "backup"
-  mv "$SITE_DIR"/* "$_backup_dir"
-  mv .git "$_backup_dir"
+  if [[-f "$SITE_DIR" ]]; then
+    mv "$SITE_DIR"/* "$_backup_dir"
+    mv .git "$_backup_dir"
 
-  # When adding custom domain from Github website,
-  # the CANME only exist on `gh-pages` branch
-  if [[ -f CNAME ]]; then
-    mv CNAME "$_backup_dir"
+    # When adding custom domain from Github website,
+    # the CANME only exist on `gh-pages` branch
+    if [[ -f CNAME ]]; then
+      mv CNAME "$_backup_dir"
+    fi
   fi
 }
 
