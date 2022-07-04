@@ -87,7 +87,7 @@ setup_gh() {
 
 backup() {
   echo "backup"
-  if [[-f "$SITE_DIR" ]]; then
+  if [[ -f "$SITE_DIR" ]]; then
     mv "$SITE_DIR"/* "$_backup_dir"
     mv .git "$_backup_dir"
 
