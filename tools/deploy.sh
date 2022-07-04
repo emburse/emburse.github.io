@@ -78,6 +78,7 @@ setup_gh() {
     git checkout -b "$PAGES_BRANCH"
   else
     git checkout "$PAGES_BRANCH"
+    git pull
   fi
 }
 
