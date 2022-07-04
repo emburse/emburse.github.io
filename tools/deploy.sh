@@ -113,6 +113,7 @@ deploy() {
   echo "deploy"
 pwd
 ls -al
+ls -al ..
   git config --global user.name "GitHub Actions"
   git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
